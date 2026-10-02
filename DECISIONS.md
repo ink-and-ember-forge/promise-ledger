@@ -16,3 +16,20 @@ Non-obvious choices and deviations from SPEC.md, with reasons (SPEC section 12).
 
 ## Not yet verified
 - Offline load and installability in a real browser (needs a Playwright check, planned for M4).
+
+## M1 plan (agreed before building)
+- **Drafts table.** Edited capture rows (type, tags) autosave per meeting in a separate Dexie `drafts` table, keyed by `meetingId`, and are deleted on commit. `meeting.rawNotes` stays as the verbatim paste for provenance. Reason: SPEC 6.1 says closing the tab must lose nothing, which `rawNotes` alone cannot guarantee for edited rows.
+- **Name matching.** `@Name` / `#Project` auto-link only on a single unambiguous match; several matches show a pick list; no match offers to create. Reason: a silent wrong guess would link the wrong colleague. Easy to change in `domain/matchName.ts`.
+- **Type-cycle key.** `Alt+T` inside the text field, a bare key when the row itself is focused. Reason: a bare key in a text field is just typing.
+- **No indexes on link fields.** `Item.people` is an array of objects, which Dexie cannot multi-index, and a duplicated id array would break "store once". Index only `state`, `originMeetingId`, `parentId`; lens queries (M2) are pure functions over loaded arrays.
+- **Commit is one transaction** that creates all items and removes the draft, so a crash cannot half-commit.
+- **New dependencies for M1:** `dexie` and `dexie-react-hooks` (live queries), `fake-indexeddb` (dev only, db tests in Node). Router is a small hash router, no dependency.
+- **Deferred:** GitHub Pages deployment (needs `base: '/promise-ledger/'` and a deploy workflow) waits until after M1; offline/install check on the live URL happens then.
+
+## M1 step 1: domain/ (line parsing, matching, draft rows)
+- **Exact name beats prefix matches.** `@Sam` links to "Sam" even when "Samantha" exists; ambiguity is only reported when the deciding tier has several hits (e.g. two "Alex"). Refines the "unambiguous only" rule so a person with a short exact name stays taggable.
+- **"Fuzzy" means exact / word / prefix, case- and accent-insensitive.** No typo tolerance (edit distance) in v1: it would raise wrong-link risk. Add later in `matchName.ts` if mistyped names prove common.
+- **Mention sigils are dropped from item text, names stay as plain words** ("ask @Sam" becomes "ask Sam"), so items read naturally in lenses. The link lives in `people` / `projectIds`.
+- **Not mentions:** `#12`-style numeric references and `@` inside e-mail addresses.
+- **Bare prefixes** (a line that is only `?` or `T:`) produce no row.
+- **Apply-to-all** adds to every row without duplicating tags and never mutates its input.
