@@ -5,7 +5,8 @@ Local-first, no-AI, no-server web app for turning meeting notes into a connected
 ```
 npm install
 npm run dev        # local dev server
-npm test           # unit tests
+npm test           # unit tests (includes network-isolation)
+npm run lint
 npm run build      # typecheck + production build
 ```
 
