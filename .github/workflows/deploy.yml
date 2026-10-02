@@ -1,0 +1,64 @@
+name: Deploy to GitHub Pages
+
+# Requires Settings > Pages > Source = "GitHub Actions".
+# "Deploy from a branch" would publish the raw source files, which cannot run (see DECISIONS.md).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BASE_PATH: /${{ github.event.repository.name }}/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: Verify the build output
+        run: |
+          echo "Base path:        $BASE_PATH"
+          echo "dist contents:"
+          ls -la dist
+          echo "--- dist/index.html"
+          cat dist/index.html
+          fail=0
+          grep -q 'src/main.tsx' dist/index.html && { echo "::error::dist/index.html still references src/main.tsx (not a build)"; fail=1; }
+          grep -q "src=\"${BASE_PATH}assets/" dist/index.html || { echo "::error::dist/index.html does not load its bundle from ${BASE_PATH}assets/ (base path wrong)"; fail=1; }
+          for f in boot-check.js manifest.webmanifest sw.js icon.svg; do
+            [ -f "dist/$f" ] || { echo "::error::dist/$f is missing"; fail=1; }
+          done
+          exit $fail
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -22,11 +22,11 @@ describe('network isolation', () => {
       for (const name of readdirSync(dir)) {
         const p = join(dir, name);
         if (statSync(p).isDirectory()) walk(p);
-        else if (/\.(ts|tsx|css|html)$/.test(p) && !p.endsWith('.test.ts')) files.push(p);
+        else if (/\.(ts|tsx|css|html|js)$/.test(p) && !p.endsWith('.test.ts')) files.push(p);
       }
     };
     walk('src');
-    files.push('index.html');
+    files.push('index.html', 'boot-check.js');
     const forbidden = /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b|https?:\/\//;
     for (const f of files) {
       const hit = readFileSync(f, 'utf8').split('\n').findIndex((l: string) => forbidden.test(l));

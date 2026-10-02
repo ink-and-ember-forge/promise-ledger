@@ -12,6 +12,14 @@ export default tseslint.config(
     rules: reactHooks.configs.recommended.rules,
   },
   {
+    // boot-check.js is a plain browser script that is deliberately not bundled
+    files: ['boot-check.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { window: 'readonly', document: 'readonly', console: 'readonly', location: 'readonly', setTimeout: 'readonly' },
+    },
+  },
+  {
     // domain/ must stay framework-free (SPEC section 4)
     files: ['src/domain/**/*.ts'],
     rules: {
