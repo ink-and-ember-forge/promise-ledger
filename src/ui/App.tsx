@@ -11,7 +11,9 @@ export function App() {
   const captureId = /^\/capture\/(.+)$/.exec(route)?.[1];
 
   useEffect(() => {
-    void repo.ensureSelf();
+    repo.ensureSelf().catch((err: unknown) => {
+      console.error('[promise-ledger] Could not open the local database. Saving will not work.', err);
+    });
   }, []);
 
   return (
