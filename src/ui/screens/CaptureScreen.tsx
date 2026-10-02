@@ -15,11 +15,12 @@ import {
   type UnresolvedMention,
 } from '../../domain';
 import { repo } from '../repo';
+import { EnrichmentPass } from './EnrichmentPass';
 
 const TYPE_LABEL: Record<ItemType, string> = { note: 'Note', task: 'Task', question: 'Question' };
 const SAVE_DELAY_MS = 250;
 
-type Stage = 'loading' | 'paste' | 'rows' | 'done';
+type Stage = 'loading' | 'paste' | 'rows' | 'enrich' | 'done';
 
 const nameOf = (pool: Array<{ id: string; name: string }>, id: string) => pool.find((x) => x.id === id)?.name;
 
@@ -165,6 +166,7 @@ export function CaptureScreen({ meetingId }: { meetingId: string }) {
   const [raw, setRaw] = useState('');
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [saved, setSaved] = useState<Item[]>([]);
+  const [detailsAdded, setDetailsAdded] = useState(0);
   const [message, setMessage] = useState('');
 
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
@@ -260,7 +262,8 @@ export function CaptureScreen({ meetingId }: { meetingId: string }) {
     const items = await repo.commitDraft(meetingId, ready);
     setSaved(items);
     setRows([]);
-    setStage('done');
+    setDetailsAdded(0);
+    setStage('enrich');
   }
 
   function onEnterInRow(i: number) {
@@ -369,10 +372,28 @@ export function CaptureScreen({ meetingId }: { meetingId: string }) {
         </div>
       )}
 
+      {stage === 'enrich' && (
+        <>
+          <p role="status">
+            {saved.length} {saved.length === 1 ? 'item' : 'items'} saved from this meeting.
+          </p>
+          <EnrichmentPass
+            items={saved}
+            people={people}
+            meetingDate={meeting.date}
+            onDone={(updated) => {
+              setDetailsAdded(updated);
+              setStage('done');
+            }}
+          />
+        </>
+      )}
+
       {stage === 'done' && (
         <div className="stack">
           <p role="status">
-            {saved.length} {saved.length === 1 ? 'item' : 'items'} saved from this meeting.
+            {saved.length} {saved.length === 1 ? 'item' : 'items'} saved from this meeting
+            {detailsAdded > 0 && `, with details added to ${detailsAdded}`}.
           </p>
           <ul className="list">
             {saved.map((it) => (

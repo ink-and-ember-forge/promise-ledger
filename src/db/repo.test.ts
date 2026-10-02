@@ -126,6 +126,26 @@ describe('items', () => {
     expect(after.updates.map((u) => u.text)).toEqual(['As of 1 Oct: in review']);
   });
 
+  it('updateItems applies every patch in one transaction, or none', async () => {
+    const m = await repo.createMeeting({ title: 'Sync', date: '2026-10-01', kind: 'team' });
+    const [a, b] = await repo.commitDraft(m.id, [row('a', { type: 'task' }), row('b', { type: 'task' })]);
+
+    await repo.updateItems([
+      { id: a!.id, patch: { importance: 'high' } },
+      { id: b!.id, patch: { effortMinutes: 20 } },
+    ]);
+    expect((await repo.db.items.get(a!.id))?.importance).toBe('high');
+    expect((await repo.db.items.get(b!.id))?.effortMinutes).toBe(20);
+
+    await expect(
+      repo.updateItems([
+        { id: a!.id, patch: { importance: 'low' } },
+        { id: 'missing', patch: { importance: 'low' } },
+      ]),
+    ).rejects.toThrow(/not found/);
+    expect((await repo.db.items.get(a!.id))?.importance).toBe('high'); // rolled back
+  });
+
   it('hides soft-deleted items from lists', async () => {
     const m = await repo.createMeeting({ title: 'Sync', date: '2026-10-01', kind: 'team' });
     const [item] = await repo.commitDraft(m.id, [row('gone')]);

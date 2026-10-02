@@ -64,3 +64,15 @@ Non-obvious choices and deviations from SPEC.md, with reasons (SPEC section 12).
 - **After saving, the screen lists what was created** with "Add more notes". The optional enrichment pass (owner, recipient, commitment, deadline, importance, effort, link) is the next PR and will plug in here.
 - **Known limit:** each row is a single-line input, so very long lines scroll rather than wrap. A growing textarea per row would fix that; deferred to keep Enter-to-next-row simple.
 - **Verified in Chromium** (throwaway Playwright install, not committed): 20 pasted lines sorted, tagged and saved with the keyboard; tab closed mid-capture and reopened with all edits restored; 20 items stored with origin set, 0 drafts left, `rawNotes` identical to the paste; no horizontal overflow at 390 px; 0 external requests, no console errors. That run found and fixed a bug where `Ctrl+Enter` only worked from the buttons, not from a text field.
+
+## M1 step 5: enrichment pass
+- **Shown right after saving rows**, as its own stage. The items are already stored, so "Skip for now" is one click and loses nothing; "Save details" (or `Ctrl/Cmd+Enter`) applies everything filled in. Both ends of the list have both buttons.
+- **Only what is filled in is touched** (`domain/enrichment.ts`). A blank field never erases a value already there.
+- **Fields by type (a refinement of SPEC 6.1):** tasks and questions get owner, who it's for, "I told them", deadline, importance, effort and link; notes get only importance and link, since owner or effort on a note is rarely meaningful. One function, `enrichmentFieldsFor`, so it is easy to widen.
+- **Owner and recipient are exclusive per role.** Choosing one replaces an earlier owner or recipient, and promotes someone who was only "involved" (from an `@Name` tag). Re-choosing the same recipient keeps its `reportedBackAt`.
+- **"I told [person] I'd do this"** needs a recipient, records `commitment.toPersonId` with `madeOn` defaulting to the origin meeting's date, and makes "Me" the owner (the Person lens's "I owe P" depends on that). The owner dropdown shows Me and locks while it is ticked, so the screen never shows a contradiction.
+- **Links must start with http or https.** Anything else (including `javascript:`) is refused. A bad link is flagged and blocks the save with a plain message, rather than being silently dropped.
+- **All details save in one transaction** (`Repo.updateItems`), so a failure leaves nothing half-applied; it bumps `touchedAt` like any edit.
+- **Not offered here:** pinning a note as "worth raising", flags (decision/risk/issue) and updates. They belong on the item detail screen (SPEC screen 4).
+- **Accessibility fix found while testing:** the "I told…" checkbox's accessible name now matches its visible text, including the person's name.
+- **Verified in Chromium** (throwaway Playwright install, not committed): task given recipient, commitment, deadline, importance, effort and link; question given an owner; note offers only importance and link; a link without a scheme blocks save; the skip path stores nothing extra and keeps the `@` tag as "involved"; 0 external requests, no console errors.
