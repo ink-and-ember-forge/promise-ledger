@@ -33,3 +33,12 @@ Non-obvious choices and deviations from SPEC.md, with reasons (SPEC section 12).
 - **Not mentions:** `#12`-style numeric references and `@` inside e-mail addresses.
 - **Bare prefixes** (a line that is only `?` or `T:`) produce no row.
 - **Apply-to-all** adds to every row without duplicating tags and never mutates its input.
+
+## M1 step 2: Dexie schema and repo
+- **`Repo` class over a `LedgerDB`.** All writes go through `src/db/repo.ts` so invariants (one "Me", required text/title, soft delete, `touchedAt`) live in one place. Clock and id generators are injectable for deterministic tests.
+- **Schema v1** indexes only `meetings.date/status` and `items.state/originMeetingId/parentId`. Further versions must be new `version(n)` blocks, never edits to a released one.
+- **Tagged people commit as `involved`.** An `@Name` mention says who is connected, not who owns or is owed; the enrichment pass can promote them to `owner` / `recipient`.
+- **`commitDraft` validates every row first, then writes items and clears the draft in one transaction.** One bad row means nothing is written and the draft is kept.
+- **"Me" cannot be removed** (SPEC section 7: exactly one `isSelf`).
+- **`dexie`** (runtime) and **`fake-indexeddb`** (dev only, so db tests run in Node) added, as planned. `dexie-react-hooks` waits for the UI step.
+- **Not done here:** export/import and `schemaVersion` in exports (M4); the constant `SCHEMA_VERSION` is defined for it.
