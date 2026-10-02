@@ -1,6 +1,7 @@
 import type {
   DraftRow,
   Item,
+  ItemPatch,
   ItemType,
   Meeting,
   Person,
@@ -214,8 +215,19 @@ export class Repo {
   }
 
   /** Any edit refreshes touchedAt, which powers "going stale" (SPEC section 7). */
-  async updateItem(id: string, patch: Partial<Omit<Item, 'id' | 'createdAt' | 'touchedAt'>>): Promise<void> {
+  async updateItem(id: string, patch: ItemPatch): Promise<void> {
     await this.db.items.update(id, { ...patch, touchedAt: this.now() });
+  }
+
+  /** Applies several item patches in one transaction: all of them land, or none do. */
+  async updateItems(entries: Array<{ id: string; patch: ItemPatch }>): Promise<void> {
+    const at = this.now();
+    await this.db.transaction('rw', this.db.items, async () => {
+      for (const { id, patch } of entries) {
+        const updated = await this.db.items.update(id, { ...patch, touchedAt: at });
+        if (updated === 0) throw new Error('Item not found.');
+      }
+    });
   }
 
   async addItemUpdate(id: string, text: string): Promise<void> {
