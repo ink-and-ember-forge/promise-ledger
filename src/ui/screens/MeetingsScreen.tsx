@@ -113,9 +113,11 @@ export function MeetingsScreen() {
   const people = useLiveQuery(() => repo.listPeople(), []);
   const projects = useLiveQuery(() => repo.listProjects(), []);
   const meetings = useLiveQuery(() => repo.listMeetings(), []);
+  const waiting = useLiveQuery(() => repo.meetingsStillToSort(), []);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   if (!people || !projects || !meetings) return null;
+  const waitingIds = new Set((waiting ?? []).map((m) => m.id));
 
   // Soft-deleted people/projects are simply omitted from views (SPEC section 7).
   const nameOf = <T extends { id: string; name: string }>(pool: T[], id: string) =>
@@ -145,12 +147,16 @@ export function MeetingsScreen() {
                   {' '}
                   · {m.date} · {KINDS.find((k) => k.value === m.kind)?.label}
                   {m.status === 'upcoming' && ' · upcoming'}
+                  {waitingIds.has(m.id) && ' · notes waiting to be sorted'}
                 </span>
                 <span className="muted block">
                   {[...names(people, m.attendeeIds), ...names(projects, m.projectIds).map((n) => `#${n}`)].join(', ')}
                 </span>
               </span>
               <span className="actions">
+                <a href={`#/capture/${m.id}`} className="button" aria-label={`Sort notes for ${m.title}`}>
+                  Sort notes
+                </a>
                 <button type="button" onClick={() => setEditingId(m.id)} aria-label={`Edit ${m.title}`}>
                   Edit
                 </button>

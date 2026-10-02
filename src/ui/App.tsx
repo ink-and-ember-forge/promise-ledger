@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { repo } from './repo';
 import { ROUTES, useRoute } from './router';
+import { CaptureScreen } from './screens/CaptureScreen';
 import { MeetingsScreen } from './screens/MeetingsScreen';
 import { PeopleScreen } from './screens/PeopleScreen';
 import { ProjectsScreen } from './screens/ProjectsScreen';
 
 export function App() {
   const route = useRoute();
+  const captureId = /^\/capture\/(.+)$/.exec(route)?.[1];
 
   useEffect(() => {
     void repo.ensureSelf();
@@ -28,6 +30,7 @@ export function App() {
         {route === '/people' && <PeopleScreen />}
         {route === '/projects' && <ProjectsScreen />}
         {route === '/meetings' && <MeetingsScreen />}
+        {captureId && <CaptureScreen meetingId={decodeURIComponent(captureId)} />}
       </main>
     </>
   );
