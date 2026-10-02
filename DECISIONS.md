@@ -42,3 +42,13 @@ Non-obvious choices and deviations from SPEC.md, with reasons (SPEC section 12).
 - **"Me" cannot be removed** (SPEC section 7: exactly one `isSelf`).
 - **`dexie`** (runtime) and **`fake-indexeddb`** (dev only, so db tests run in Node) added, as planned. `dexie-react-hooks` waits for the UI step.
 - **Not done here:** export/import and `schemaVersion` in exports (M4); the constant `SCHEMA_VERSION` is defined for it.
+
+## M1 step 3: People, Projects and Meetings screens
+- **Hash router** (`src/ui/router.ts`), no dependency; works on any static host, including GitHub Pages later. Default route is Meetings, the closest screen to Capture until Today exists.
+- **`dexie-react-hooks`** added for `useLiveQuery`, so lists update when the database changes. Screens read through the same `Repo` as everything else.
+- **Meeting dates are stored as `YYYY-MM-DD`** (valid ISO 8601, from the date input in local time) rather than a full timestamp, so a meeting never shifts day across time zones.
+- **"Me" is pre-ticked as an attendee** on new meetings and has no Remove button. Apply-to-all in Capture ignores self, as the spec says.
+- **Removing a person or project keeps the meetings and items** that referenced them; the missing name is simply omitted from the list (SPEC section 7). Verified in a real browser.
+- **Empty states** are one sentence plus the next action (SPEC section 9).
+- **No component tests yet.** The UI was verified by driving the built app in Chromium (create person, project and meeting; reload; soft-delete; no external requests, no console errors) using a throwaway Playwright install outside the repo. A committed end-to-end suite arrives in M4; a jsdom component-test setup was not added, to avoid a dependency for three simple forms.
+- **Added `<link rel="icon">`** to `index.html` after the browser check showed a 404 on the automatic favicon request.
