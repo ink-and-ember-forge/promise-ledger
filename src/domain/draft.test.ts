@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { applyAllTarget, applyToAll, splitDraftRows, type DraftRow } from './draft';
+import {
+  applyAllTarget,
+  applyToAll,
+  cycleType,
+  emptyRow,
+  splitDraftRows,
+  toDraftRow,
+  type DraftRow,
+} from './draft';
 
 const people = [
   { id: 'me', name: 'Me' },
@@ -64,5 +72,24 @@ describe('applyAllTarget / applyToAll', () => {
     expect(out.map((r) => r.personIds)).toEqual([['sam'], ['sam']]);
     expect(out.map((r) => r.projectIds)).toEqual([['atlas'], ['atlas']]);
     expect(rows[0]!.personIds).toEqual([]); // input not mutated
+  });
+});
+
+describe('cycleType / emptyRow / toDraftRow', () => {
+  it('cycles note, task, question and wraps', () => {
+    expect(cycleType('note')).toBe('task');
+    expect(cycleType('task')).toBe('question');
+    expect(cycleType('question')).toBe('note');
+  });
+
+  it('starts blank rows as untagged notes', () => {
+    expect(emptyRow()).toEqual({ text: '', type: 'note', personIds: [], projectIds: [] });
+  });
+
+  it('keeps unresolved mentions on the row only when there are some', () => {
+    const [clean] = splitDraftRows('plain', people, projects);
+    expect(toDraftRow(clean!).unresolved).toBeUndefined();
+    const [open] = splitDraftRows('ask @Morgan', people, projects);
+    expect(toDraftRow(open!).unresolved?.people).toEqual([{ name: 'Morgan', candidateIds: [] }]);
   });
 });

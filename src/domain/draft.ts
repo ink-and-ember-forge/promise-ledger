@@ -8,6 +8,8 @@ export interface DraftRow {
   type: ItemType;
   personIds: string[];
   projectIds: string[];
+  /** @/# mentions that could not be linked automatically; kept so they survive a closed tab. */
+  unresolved?: { people: UnresolvedMention[]; projects: UnresolvedMention[] };
 }
 
 /** Mentions the row could not link on its own; the UI offers a pick list or "create". */
@@ -90,4 +92,21 @@ export function applyToAll(rows: readonly DraftRow[], target: ApplyAllTarget): D
     personIds: target.personId ? unique([...r.personIds, target.personId]) : r.personIds,
     projectIds: target.projectId ? unique([...r.projectIds, target.projectId]) : r.projectIds,
   }));
+}
+
+const TYPE_ORDER: readonly ItemType[] = ['note', 'task', 'question'];
+
+/** The type-cycle shortcut: note, task, question, then back to note. */
+export function cycleType(type: ItemType): ItemType {
+  return TYPE_ORDER[(TYPE_ORDER.indexOf(type) + 1) % TYPE_ORDER.length]!;
+}
+
+export const emptyRow = (): DraftRow => ({ text: '', type: 'note', personIds: [], projectIds: [] });
+
+/** Flattens a resolved draft into the persisted row shape, keeping only mentions still open. */
+export function toDraftRow(d: ResolvedDraft): DraftRow {
+  const hasOpen = d.unresolvedPeople.length > 0 || d.unresolvedProjects.length > 0;
+  return hasOpen
+    ? { ...d.row, unresolved: { people: d.unresolvedPeople, projects: d.unresolvedProjects } }
+    : d.row;
 }

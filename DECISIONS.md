@@ -52,3 +52,15 @@ Non-obvious choices and deviations from SPEC.md, with reasons (SPEC section 12).
 - **Empty states** are one sentence plus the next action (SPEC section 9).
 - **No component tests yet.** The UI was verified by driving the built app in Chromium (create person, project and meeting; reload; soft-delete; no external requests, no console errors) using a throwaway Playwright install outside the repo. A committed end-to-end suite arrives in M4; a jsdom component-test setup was not added, to avoid a dependency for three simple forms.
 - **Added `<link rel="icon">`** to `index.html` after the browser check showed a 404 on the automatic favicon request.
+
+## M1 step 4: Capture screen
+- **Route `#/capture/<meetingId>`**, reached from "Sort notes" on each meeting. The meetings list also shows "notes waiting to be sorted" for meetings with uncommitted rows (the Today screen's "still to sort" arrives in M3).
+- **Two stages: paste, then rows.** `Ctrl/Cmd+Enter` sorts the paste into rows; in the rows stage the same chord saves all rows, from anywhere on the screen. "Back to pasted notes" asks first, since it discards row edits.
+- **Autosave.** The pasted block is saved verbatim to `rawNotes` and the rows to the `drafts` table, both debounced by 250 ms, with an immediate flush when the page is hidden. On return the screen restores the draft, including edits and open prompts.
+- **Unresolved mentions persist on the row** (`DraftRow.unresolved`), so an ambiguous `@Alex` still asks "which one?" after a closed tab. Choices per mention: pick a candidate, add a new person/project from the mention's name, or leave untagged.
+- **Keyboard model.** `Alt+T` cycles the type from the text field (`cycleType` in `domain/`). On the type dropdown itself the browser's own type-ahead (n / t / q) acts as the "single key". `Enter` moves to the next row and adds a blank row after the last; blank rows are dropped on save.
+- **Apply to all** appears only when the meeting has exactly one project or one non-self attendee, as the spec says.
+- **Untagged rows are saved** and will surface under "Needs a home" (M2).
+- **After saving, the screen lists what was created** with "Add more notes". The optional enrichment pass (owner, recipient, commitment, deadline, importance, effort, link) is the next PR and will plug in here.
+- **Known limit:** each row is a single-line input, so very long lines scroll rather than wrap. A growing textarea per row would fix that; deferred to keep Enter-to-next-row simple.
+- **Verified in Chromium** (throwaway Playwright install, not committed): 20 pasted lines sorted, tagged and saved with the keyboard; tab closed mid-capture and reopened with all edits restored; 20 items stored with origin set, 0 drafts left, `rawNotes` identical to the paste; no horizontal overflow at 390 px; 0 external requests, no console errors. That run found and fixed a bug where `Ctrl+Enter` only worked from the buttons, not from a text field.
